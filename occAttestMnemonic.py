@@ -26,7 +26,7 @@ async def slip(loop):
 
     print(msg)
 
-    slipEncoder = OccSlip()
+    slipEncoder = SlipEncoder()
     payload = slipEncoder.encodeToSLIP(msg.getBinary())
 
     payload = ''.join(map(str, payload))

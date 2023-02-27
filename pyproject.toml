@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "trusted-anker-communication"
+version = "0.1.0"
+description = ""
+authors = ["riddle&code"]
+readme = "README.md"
+packages = [{include = "trusted_anker_communication"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+serial = "^0.0.97"
+esptool = "^4.5"
+pyserial-asyncio = "^0.6"
+wallycore = "^0.8.8"
+aioudp = "^0.1.1"
+aio-udp-server = "^0.0.7"
+lanbox = "^1.0"
+pycolors = "^0.1.2"
+paho-mqtt = "^1.6.1"
+chacha20poly1305 = "^0.0.3"
+pycrypto = "^2.6.1"
+pillow = "^9.4.0"
+zpl = "^0.1.10"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
