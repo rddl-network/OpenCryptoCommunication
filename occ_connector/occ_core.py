@@ -77,8 +77,6 @@ class OSCMessage:
             binary = OSCAESArgument(argument)
         else:
             binary = OSCArgument(argument)
-            # print(argument)
-            # print(binary)
 
         self.typetags = self.typetags + binary[0]
         self.rawAppend(binary[1])
@@ -235,7 +233,6 @@ def OSCArgument(next):
     (typetag, data) tuple."""
 
     if type(next) == type(""):
-        # next = hex(192) + next + hex(192)
         OSCstringLength = math.ceil((len(next) + 1) / 4.0) * 4
         next = next.encode("utf-8")
         binary = struct.pack(">%ds" % (OSCstringLength), next)
@@ -293,7 +290,6 @@ def parseArgs(args):
     possible) as floats or integers."""
     parsed = []
     for arg in args:
-        # print( arg)
         arg = arg.strip()
         interpretation = None
         try:
@@ -335,8 +331,6 @@ def decodeOSC(data):
         print("BUNDLE not Supported!")
         raise BundleNotSupported
         time, rest = readLong(rest)
-        #       decoded.append(address)
-        #       decoded.append(time)
         while len(rest) > 0:
             length, rest = readInt(rest)
             decoded.append(decodeOSC(rest[:length]))
