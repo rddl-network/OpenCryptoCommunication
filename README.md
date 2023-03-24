@@ -1,4 +1,4 @@
-# Trusted-Anker-Communication
+# OpenCryptoCommunication
 
 This Python library allows you to connect to a hardware device called Trusted-Anker via OSC (Open Sound Control) with the OccConnector (Open Crypto Control Connector) class.
 
