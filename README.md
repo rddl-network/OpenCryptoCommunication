@@ -55,7 +55,7 @@ To create an instance of the `OccConnector` class, you will need to provide the 
 
 Example:
 
-\```python
+```python
 from occ_connector import OccConnector, get_usb_serial_ports
 
 serial_interface = get_usb_serial_ports()
@@ -63,7 +63,7 @@ planet_mint_private_key = "your_planet_mint_private_key"
 public_key = "your_public_key"
 
 occ_connector = OccConnector(serial_interface, planet_mint_private_key, public_key)
-\```
+```
 
 Note: The `get_usb_serial_ports()` function auto-detects a connected Trusted-Anker device. If more than one serial device is connected, you may need to adapt the function to select the correct device.
 
@@ -71,14 +71,16 @@ Note: The `get_usb_serial_ports()` function auto-detects a connected Trusted-Ank
 
 The `OccConnector` class provides the following methods:
 
-- `create_secrets()`: Create secrets (mnemonic) in the Trusted-Anker device.
-- `mnemonic_to_bytes()`: Convert the mnemonic to bytes.
-- `mnemonic_from_bytes()`: Convert bytes to the mnemonic.
-- `mnemonic_to_seed()`: Convert the mnemonic to a seed.
-- `sign_hash_with_trusted_anker(data_hash: str)`: Sign a hash with Trusted-Anker.
-- `valise_init()`: Initialize the valise in the Trusted-Anker device.
-- `valise_get()`: Get the valise from the Trusted-Anker device.
-- `sign_wally_ecdh(cid: str)`: Sign a Wally ECDH with Trusted-Anker.
+- `sign_hash_with_trusted_anchor(data_hash: str)`: Sign a hash with Trusted-Anker.
+- `valise_seed_init()`: Initialize with hardcoded seed of the Valise.
+- `create_mnemonic()`: Create a mnemonic seed.
+- `valise_mnemonic_set(mnemonic)`: Set the mnemonic seed.
+- `valise_get()`: Get the mnemonic seed.
+- `mnemonic_to_private_key()`: Derive the private key from the mnemonic seed.
+- `ecdsa_derive_pubkey(parent_key)`: Derive the public key from the private key.
+- `ecdsa_sig_verify_pub_key_hash(pubkey, data_hash)`: Save the public key and the data hash to the trusted anchor that you want to verify.
+- `ecdsa_sig_verify(signature)`: Verify the signature of the data hash.
+
 
 ## Contributing
 
