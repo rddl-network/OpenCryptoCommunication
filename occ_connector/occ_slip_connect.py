@@ -32,13 +32,10 @@ def slip_reader(port):
     in_escape = False
     successful_slip = False
     occ_slip = bytes([])
-    # print('SLIP Reader start parsing')
     while True:
         waiting = port.inWaiting()
         read_bytes = port.read(1 if waiting == 0 else waiting)
-        # print(F'READ BYTES: {read_bytes}')
         occ_slip += read_bytes
-        # print(F"OCC SLIP: {occ_slip}")
         if read_bytes == b"":
             if partial_packet is None:  # fail due to no data
                 msg = (
@@ -49,7 +46,6 @@ def slip_reader(port):
             else:  # fail during packet transfer
                 msg = "Packet content transfer stopped (received {} bytes)".format(len(partial_packet))
         if b"ESP-ROM:" in read_bytes:
-            # print(read_bytes)
             if b"ESP-ROM:esp32c3" not in read_bytes:
                 print(f"Wrong hardware target. Only works with Risc-V based ESP32C3 chip series.")
                 quit()
@@ -62,15 +58,12 @@ def slip_reader(port):
                         partial_packet = b""
                     else:
                         remaining_data = port.read(port.inWaiting())
-                        # print(F"REMAINING:DATA: {remaining_data}")
                 elif b == b"\xc0":  # end of packet
                     partial_packet = None
                     global decoded_data
                     slipDecoder = SlipDecoder()
                     slip = slipDecoder.decode_from_slip(occ_slip)
-                    # print(slip)
                     decoded_data = decode_packet(bytes(slip))
-                    # print(decoded_data)
                     successful_slip = True
                     occ_slip = bytes([])
                     yield decoded_data
@@ -119,12 +112,10 @@ class OccSerial:
         self.ser = None
 
     def write(self, bytes_):
-        # print("inside slipreaderwrite")
         assert self.ser is not None
         return self.ser.write(bytes_)
 
     def read(self, n):
-        # print("inside slipreaderread")
         assert self.ser is not None
         return self.ser.read(n)
 
@@ -164,48 +155,95 @@ class OccConnector:
         occ_serial.disconnect()
         return msg
 
-    def create_secrets(self):
+    def sign_hash_with_trusted_anchor(self, data_hash: str) -> Tuple[str, str, str]:
+        """
+        @brief: Signs a hash with the Trusted Anchor
+        @param data_hash: raw hash of the data to be signed
+        @return: the signed hash
+        """
+        msg = OSCMessage("/IHW/ecdsaSigFromBytes", ",sisis", [self.private_key, 32, data_hash, 32, ""])
+        occ_message = self._send_osc_message(msg)
+        return occ_message[2]
+
+    def valise_seed_init(self) -> str:
+        """
+        @brief: Initializes with hardcoded seed of the Valise
+        @return: mnemonic seed
+        """
+        msg = OSCMessage("/IHW/valiseMnemonicSeedInit", ",s", [""])
+        occ_message = self._send_osc_message(msg)
+        return occ_message[2][0]
+
+    def create_mnemonic(self) -> str:
+        """
+        @brief: Creates a mnemonic seed
+        @return: the mnemonic seed
+        """
         # Change calls according to wallet implementation on te different ESP32 MCUs
-        msg = OSCMessage("/IHW/mnemonic", ",i", [0])
+        msg = OSCMessage("/IHW/bip39Mnemonic", ",s", [""])
         occ_message = self._send_osc_message(msg)
         mnemonic = occ_message[2][1]
         self.mnemonic = mnemonic
+        return mnemonic
 
-    def mnemonic_to_bytes(self):
-        msg = OSCMessage("/IHW/mnemonicToBytes", ",s", [self.mnemonic])
+    def valise_mnemonic_set(self, mnemonic):
+        """
+        @brief: Sets the mnemonic seed
+        @param mnemonic: string of the mnemonic seed
+        @return: true if successful
+        """
+        msg = OSCMessage("/IHW/valiseMnemonicSet", ",ss", [mnemonic, ""])
+        occ_message = self._send_osc_message(msg)
+        return occ_message[2][0]
+
+    def valise_get(self) -> str:
+        """
+        @brief: Gets the mnemonic seed
+        @return: the mnemonic seed
+        """
+        msg = OSCMessage("/IHW/valiseMnemonicGet", ",s", [""])
+        occ_message = self._send_osc_message(msg)
+        self.mnemonic = occ_message[2][0]
+        return self.mnemonic
+
+    def mnemonic_to_private_key(self):
+        """
+        @brief: Derives the private key from the mnemonic seed
+        """
+        msg = OSCMessage("/IHW/bip39MnemonicToSeed", ",ss", [self.mnemonic, ""])
         occ_message = self._send_osc_message(msg)
         self.private_key = occ_message[2][0]
 
-    def mnemonic_from_bytes(self):
-        msg = OSCMessage("/IHW/mnemonicFromBytes", ",s", [self.private_key])
-        occ_message = self._send_osc_message(msg)
-        self.mnemonic = occ_message[2][0]
-
-    def mnemonic_to_seed(self):
-        msg = OSCMessage("/IHW/bip39MnemonicToSeed", ",s", [self.mnemonic])
-        occ_message = self._send_osc_message(msg)
-        self.seed = occ_message[2][0]
-
-    def sign_hash_with_trusted_anker(self, data_hash: str) -> Tuple[str, str, str]:
-        msg = OSCMessage("/IHW/wallyEcSigFromBytes", ",sisis", [self.private_key, 32, data_hash, 32, ""])
-        occ_message = self._send_osc_message(msg)
-        return occ_message[2]
-
-    def valise_init(self):
-        msg = OSCMessage('/IHW/valiseInit', ',', [])
-        occ_message = self._send_osc_message(msg)
-        return occ_message[2]
-
-    def valise_get(self):
-        msg = OSCMessage('/IHW/valiseGet', ',', [])
+    def ecdsa_derive_pubkey(self, parent_key):
+        """
+        @brief: Derives the public key from the private key
+        @param parent_key: contains private key to derive the public key from
+        @return:
+        """
+        msg = OSCMessage("/IHW/ecdsaPubKey", ",sii", [parent_key, 32, 1])
         occ_message = self._send_osc_message(msg)
         return occ_message[2][0]
 
-    def sign_wally_ecdh(self, cid: str) -> str:
-        print("cid: ", cid)
-        msg = OSCMessage("/IHW/wallyEcdh", ",sisis", [self.private_key, self.public_key, cid])
+    def ecdsa_sig_verify_pub_key_hash(self, pubkey, data_hash):
+        """
+        @brief: Saves the public key and the data hash to the trusted anchor that you want to verify. This is because the OSC message is limited to 64 bytes so we need to split it up into two calls.
+        @param pubkey: public key to verify
+        @param data_hash: Original unsigned data hash
+        @return: public key if successful
+        """
+        msg = OSCMessage("/IHW/ecdsaSigVerifyPubkeyHash", ",sisi", [pubkey, 33, data_hash, 32])
         occ_message = self._send_osc_message(msg)
         return occ_message[2][0]
+
+    def ecdsa_sig_verify(self, signature) -> bool:
+        """
+        @brief: Verifies the signature of the data hash
+        @param signature: signed hash
+        @return: true if successful
+        """
+        msg = OSCMessage("/IHW/ecdsaSigVerify", ",si", [signature, 64])
+        occ_message = self._send_osc_message(msg)
+        return occ_message[2][6]
 
 
 def get_usb_serial_ports() -> str | None:
